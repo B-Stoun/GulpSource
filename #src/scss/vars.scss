@@ -1,0 +1,18 @@
+$padding: "";
+$wrapperWidth: "";
+
+@mixin columnWrapper {
+    max-width: $wrapperWidth;
+    margin: 0 auto;
+    padding: 0 $padding;
+}
+
+@mixin columnContainer {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 $padding * -1;
+}
+
+@mixin columns ($columns, $margin) {
+    width: calc(100% / $columns - $margin);
+}

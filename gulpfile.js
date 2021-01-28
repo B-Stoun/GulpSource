@@ -99,12 +99,6 @@ function css() {
         )
         .pipe(webpcss())
         .pipe(dest(path.build.css))
-        .pipe(clean_css())
-        .pipe(
-            rename({
-                extname: ".min.css"
-            })
-        )
         .pipe(sourcemaps.write())
         .pipe(dest(path.build.css))
         .pipe(browsersync.stream());
@@ -133,6 +127,7 @@ function js() {
                     }
                 ]
             },
+            watch: true,
             mode: 'production',
         }))
         .pipe(sourcemaps.write())
@@ -147,18 +142,7 @@ function images() {
                 quality: 70
             })
         )
-        .pipe(dest(path.build.img))
         .pipe(src(path.src.img))
-        .pipe(
-            imagemin({
-                progressive: true,
-                interlaced: true,
-                optimizationLevel: 3,
-                svgoPlugins: [{
-                    removeViewBox: false
-                }]
-            })
-        )
         .pipe(dest(path.build.img))
         .pipe(browsersync.stream());
 }
@@ -171,13 +155,6 @@ function fonts() {
     return src(path.src.fonts)
         .pipe(ttf2woff2())
         .pipe(dest(path.build.fonts));
-}
-function otf2ttf() {
-    return src([source_folder + '/fonts/*.otf'])
-        .pipe(fonter({
-            formats: ['ttf']
-        }))
-        .pipe(dest([source_folder + '/fonts/TTF/']));
 }
 
 function svgSprites() {
@@ -194,6 +171,22 @@ function svgSprites() {
         .pipe(dest(path.build.img))
         .pipe(browsersync.stream());
 }
+
+function cb() { }
+
+function watchFiles(params) {
+    gulp.watch([path.watch.html], html);
+    gulp.watch([path.watch.css], css);
+    gulp.watch([path.watch.js], js);
+    gulp.watch([path.watch.img], images);
+}
+
+function clean(params) {
+    return del(path.clean);
+}
+
+var dev = gulp.series(clean, fonts, gulp.parallel(html, css, js, images, svgSprites, watchFiles), browserSync);
+//======================================================================//
 
 function fontsStyle(done) {
 
@@ -214,23 +207,19 @@ function fontsStyle(done) {
             }
         })
     }
+    done();
 }
 
-function cb() { }
-
-function watchFiles(params) {
-    gulp.watch([path.watch.html], html);
-    gulp.watch([path.watch.css], css);
-    gulp.watch([path.watch.js], js);
-    gulp.watch([path.watch.img], images);
+function otf2ttf() {
+    return src([source_folder + '/fonts/*.otf'])
+        .pipe(fonter({
+            formats: ['ttf']
+        }))
+        .pipe(dest([source_folder + '/fonts/TTF/']));
 }
 
-function clean(params) {
-    return del(path.clean);
-}
+var start = gulp.series(otf2ttf, fontsStyle);
 
-var dev = gulp.series(clean, gulp.parallel(html,css,js,images, fonts, fontsStyle, svgSprites, watchFiles, browserSync), otf2ttf);
-//======================================================================//
 //=========================Production Mode==============================//
 
 
@@ -252,7 +241,9 @@ function cssProd() {
         )
         .pipe(webpcss())
         .pipe(dest(path.build.css))
-        .pipe(clean_css())
+        .pipe(clean_css({
+            level: 2,
+        }))
         .pipe(
             rename({
                 extname: ".min.css"
@@ -288,6 +279,29 @@ function jsProd() {
         .pipe(dest(path.build.js))
 }
 
+function imagesProd() {
+    return src(path.src.img)
+        .pipe(
+            webp({
+                quality: 70
+            })
+        )
+        .pipe(dest(path.build.img))
+        .pipe(src(path.src.img))
+        .pipe(
+            imagemin({
+                progressive: true,
+                interlaced: true,
+                optimizationLevel: 3,
+                svgoPlugins: [{
+                    removeViewBox: false
+                }]
+            })
+        )
+        .pipe(dest(path.build.img))
+        .pipe(browsersync.stream());
+}
+
 function svgSpritesProd() {
     return gulp.src([source_folder + '/sprites/*.svg'])
         .pipe(svgSprite({
@@ -302,7 +316,7 @@ function svgSpritesProd() {
         .pipe(dest(path.build.img))
 }
 
-var prod = gulp.series(clean, gulp.parallel(html, cssProd, jsProd, images, fonts, svgSpritesProd));
+var prod = gulp.series(clean, gulp.parallel(html, cssProd, jsProd, imagesProd, fonts, svgSpritesProd));
 //======================================================================//
 
 exports.fontsStyle = fontsStyle;
@@ -317,6 +331,7 @@ exports.otf2ttf = otf2ttf;
 exports.svgSprites = svgSprites;
 exports.cssProd = cssProd;
 exports.jsProd = jsProd;
+exports.imagesProd = imagesProd;
 exports.svgSpritesProd = svgSpritesProd;
 exports.prod = prod;
-
+exports.start = start;
